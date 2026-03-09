@@ -97,12 +97,54 @@ def logout():
     # Redirect user to login form
     return redirect("/login")
 
+@app.route("/profile/change-password", methods=["GET", "POST"])
+@login_required
+def change_password():
+    user_id = session.get("user_id")
+    if request.method == "POST":
+        current_password = request.form.get("old_password")
+        new_password = request.form.get("new_password")
+        confirm_password = request.form.get("confirm_password")
 
-# (Keep your imports and basic setup at the top as they are)
+        if not current_password or not new_password or not confirm_password:
+            flash("All fields are required.", "danger")
+            return redirect("/profile/change-password")
 
-# -------------------------
+        if new_password != confirm_password:
+            flash("New passwords do not match.", "danger")
+            return redirect("/profile/change-password")
+
+        if len(new_password) < 6:
+            flash("New password must be at least 6 characters.", "danger")
+            return redirect("/profile/change-password")
+
+        # Verify current password
+        try:
+            rows = db.execute("SELECT hash FROM users WHERE user_id = ?", user_id)
+        except Exception:
+            rows = []
+
+        if len(rows) != 1 or not check_password_hash(rows[0]["hash"], current_password):
+            flash("Current password is incorrect.", "danger")
+            return redirect("/profile/change-password")
+
+        # Update password
+        try:
+            new_hash = generate_password_hash(new_password)
+            db.execute("UPDATE users SET hash = ? WHERE user_id = ?", new_hash, user_id)
+            flash("Password updated successfully.", "success")
+        except Exception:
+            flash("Unable to update password. Try again later.", "danger")
+
+        return redirect("/")
+
+    return render_template("change_password.html")
+
+
+# =========================================================
 # DOCTOR ROUTES
-# -------------------------
+# =========================================================
+
 @app.route("/doctor", methods=["GET", "POST"])
 @login_required
 @role_required("doctor")
@@ -114,7 +156,6 @@ def doctor_dashboard():
     if request.method == "POST":
         attended_ids = request.form.getlist("attended")
         try:
-            # Solo actualizamos a 'attended' las que el doctor marcó en este momento
             for aid in attended_ids:
                 db.execute("UPDATE appointments SET status = 'attended' WHERE appointment_id = ?", int(aid))
             flash("Attendance successfully updated.", "success")
@@ -124,10 +165,10 @@ def doctor_dashboard():
         return redirect("/doctor")
 
     try:
-        # Añadimos "AND a.status = 'scheduled'" para que desaparezcan al guardarse
         appointments = db.execute(
             """
             SELECT a.appointment_id, p.first_name || ' ' || p.last_name AS patient_name, 
+                   date(a.appointment_date) AS appointment_date,
                    time(a.appointment_date) AS appointment_time, a.status
             FROM appointments a
             JOIN patients p ON a.patient_id = p.patient_id
@@ -148,13 +189,14 @@ def doctor_dashboard():
 @login_required
 @role_required("doctor")
 def doctor_appointments():
-    """List first 50 appointments for the doctor (past, present and future)."""
+    """List first 50 appointments for the doctor."""
     doctor_id = session.get("user_id")
     try:
         appointments = db.execute(
             """
             SELECT a.appointment_id, p.first_name || ' ' || p.last_name AS patient_name, 
-                   a.appointment_date AS appointment_time, a.status
+                   date(a.appointment_date) AS appointment_date,
+                   time(a.appointment_date) AS appointment_time, a.status
             FROM appointments a
             JOIN patients p ON a.patient_id = p.patient_id
             WHERE a.doctor_id = ?
@@ -169,19 +211,21 @@ def doctor_appointments():
     return render_template("doctor_appointments.html", appointments=appointments)
 
 
-# -------------------------
+# =========================================================
 # SECRETARY ROUTES
-# -------------------------
+# =========================================================
+
 @app.route("/secretary")
 @login_required
 @role_required("secretary")
 def secretary_dashboard():
     """Secretary main page: appointments +/- 10 minutes from now."""
     try:
-        # SQLite datetime logic to find +/- 10 minutes from current local time
         appointments = db.execute(
             """
-            SELECT a.appointment_id, time(a.appointment_date) AS appointment_time, a.status,
+            SELECT a.appointment_id, 
+                   date(a.appointment_date) AS appointment_date,
+                   time(a.appointment_date) AS appointment_time, a.status,
                    p.first_name || ' ' || p.last_name AS patient_name,
                    u.first_name || ' ' || u.last_name AS doctor_name
             FROM appointments a
@@ -222,78 +266,6 @@ def secretary_doctors():
     return render_template("secretary_doctors.html", doctors=doctors)
 
 
-@app.route("/secretary/register_patient", methods=["GET", "POST"])
-@login_required
-@role_required("secretary")
-def secretary_register_patient():
-    if request.method == "POST":
-        cedula = request.form.get("cedula")
-        first_name = request.form.get("nombres")
-        last_name = request.form.get("apellidos")
-        phone = request.form.get("celular")
-        email = request.form.get("correo")
-        birth_date = request.form.get("fecha_nacimiento")
-
-        try:
-            db.execute("""
-                INSERT INTO patients (cedula, first_name, last_name, phone, email, birth_date) 
-                VALUES (?, ?, ?, ?, ?, ?)
-            """, cedula, first_name, last_name, phone, email, birth_date)
-            flash("Patient registered successfully!", "success")
-            return redirect("/secretary")
-        except Exception as e:
-            print(e)
-            flash("Error registering patient. Cedula might already exist.", "danger")
-            
-    return render_template("secretary_register_patient.html")
-
-@app.route("/secretary/register_appointment", methods=["GET", "POST"])
-@login_required
-@role_required("secretary")
-def secretary_register_appointment():
-    if request.method == "POST":
-        patient_id = request.form.get("patient_id")
-        doctor_id = request.form.get("doctor_id")
-        fecha = request.form.get("fecha_cita")
-        hora = request.form.get("hora_cita")
-        estado = request.form.get("estado")
-        
-        # Combinar fecha y hora para SQLite
-        appointment_date = f"{fecha} {hora}:00"
-        
-        try:
-            db.execute("""
-                INSERT INTO appointments (patient_id, doctor_id, appointment_date, status) 
-                VALUES (?, ?, ?, ?)
-            """, patient_id, doctor_id, appointment_date, estado)
-            flash("Appointment scheduled successfully!", "success")
-            return redirect("/secretary")
-        except Exception as e:
-            print(e)
-            flash("Error scheduling appointment. Check if all fields are correct.", "danger")
-
-    # GET: Cargar datos para los Dropdowns
-    patients = db.execute("SELECT patient_id, cedula, first_name, last_name FROM patients ORDER BY last_name")
-    doctors = db.execute("SELECT user_id, first_name, last_name FROM users WHERE role_id = (SELECT role_id FROM roles WHERE role_name = 'doctor')")
-    specialties = db.execute("SELECT specialty_id, description FROM specialties")
-    
-    return render_template("secretary_register_appointment.html", patients=patients, doctors=doctors, specialties=specialties)
-
-# --- API Helper para autocompletar Paciente ---
-@app.route("/api/get_patient/<cedula>")
-@login_required
-@role_required("secretary")
-def get_patient(cedula):
-    """Devuelve los datos del paciente dado su número de cédula"""
-    try:
-        rows = db.execute("SELECT patient_id, first_name, last_name FROM patients WHERE cedula = ?", cedula)
-        if len(rows) == 1:
-            return jsonify({"success": True, "patient": rows[0]})
-        return jsonify({"success": False})
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)})
-    
-
 @app.route("/secretary/appointments")
 @login_required
 @role_required("secretary")
@@ -302,7 +274,9 @@ def secretary_appointments():
     try:
         appointments = db.execute(
             """
-            SELECT a.appointment_id, a.appointment_date AS appointment_time, a.status,
+            SELECT a.appointment_id, 
+                   date(a.appointment_date) AS appointment_date,
+                   time(a.appointment_date) AS appointment_time, a.status,
                    p.first_name || ' ' || p.last_name AS patient_name,
                    u.first_name || ' ' || u.last_name AS doctor_name
             FROM appointments a
@@ -315,6 +289,138 @@ def secretary_appointments():
         print(e)
         appointments = []
     return render_template("secretary_appointments.html", appointments=appointments)
+
+
+@app.route("/secretary/register_appointment", methods=["GET", "POST"])
+@login_required
+@role_required("secretary")
+def secretary_register_appointment():
+    if request.method == "POST":
+        patient_id = request.form.get("patient_id")
+        doctor_id = request.form.get("doctor_id")
+        fecha = request.form.get("fecha_cita")
+        hora = request.form.get("hora_cita")
+        estado = request.form.get("estado")
+        
+        appointment_date = f"{fecha} {hora}:00"
+
+        # Validar doble reserva
+        existing = db.execute("""
+            SELECT appointment_id FROM appointments 
+            WHERE doctor_id = ? AND appointment_date = ? AND status != 'cancelled'
+        """, doctor_id, appointment_date)
+
+        if existing:
+            flash("This time slot is already booked. Please select another.", "danger")
+            return redirect("/secretary/register_appointment")
+        
+        try:
+            db.execute("""
+                INSERT INTO appointments (patient_id, doctor_id, appointment_date, status) 
+                VALUES (?, ?, ?, ?)
+            """, patient_id, doctor_id, appointment_date, estado)
+            flash("Appointment scheduled successfully!", "success")
+            return redirect("/secretary")
+        except Exception as e:
+            print(e)
+            flash("Error scheduling appointment.", "danger")
+
+    # GET: Cargar doctores y especialidades
+    doctors = db.execute("SELECT user_id, first_name, last_name FROM users WHERE role_id = (SELECT role_id FROM roles WHERE role_name = 'doctor')")
+    specialties = db.execute("SELECT specialty_id, name AS description FROM specialties")
+    
+    return render_template("secretary_register_appointment.html", doctors=doctors, specialties=specialties)
+
+
+@app.route("/secretary/register_patient", methods=["GET", "POST"])
+@login_required
+@role_required("secretary")
+def secretary_register_patient():
+    if request.method == "POST":
+        cedula = request.form.get("cedula")
+        first_name = request.form.get("nombres").upper()
+        last_name = request.form.get("apellidos").upper()
+        phone = request.form.get("celular")
+        email = request.form.get("correo")
+        birth_date = request.form.get("fecha_nacimiento")
+
+        try:
+            # Usar 'dni' internamente para que coincida con tu base de datos actual
+            db.execute("""
+                INSERT INTO patients (dni, first_name, last_name, phone, email, birth_date) 
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, cedula, first_name, last_name, phone, email, birth_date)
+            flash("Patient registered successfully!", "success")
+            return redirect("/secretary")
+        except Exception as e:
+            print(e)
+            flash("Error registering patient. ID might already exist.", "danger")
+            
+    return render_template("secretary_register_patient.html")
+
+
+# =========================================================
+# API ROUTES (Para uso interno de JS)
+# =========================================================
+
+@app.route("/api/get_patient/<cedula>")
+@login_required
+@role_required("secretary")
+def get_patient(cedula):
+    """Busca al paciente usando 'dni' para evitar el error de columna"""
+    try:
+        rows = db.execute("SELECT patient_id, first_name, last_name FROM patients WHERE dni = ?", cedula)
+        if len(rows) == 1:
+            return jsonify({"success": True, "patient": rows[0]})
+        return jsonify({"success": False})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})
+
+
+@app.route("/api/available_slots")
+@login_required
+@role_required("secretary")
+def available_slots():
+    """Calcula los bloques de 30 minutos libres para un doctor en una fecha."""
+    doctor_id = request.args.get("doctor_id")
+    date_str = request.args.get("date")
+
+    if not doctor_id or not date_str:
+        return jsonify({"slots": []})
+
+    # 1. Obtener horario de trabajo del doctor
+    doctor = db.execute("SELECT start_time, end_time FROM users WHERE user_id = ?", doctor_id)
+    if not doctor or not doctor[0]["start_time"] or not doctor[0]["end_time"]:
+        return jsonify({"slots": []})
+
+    start_time_str = doctor[0]["start_time"][:5] 
+    end_time_str = doctor[0]["end_time"][:5]
+
+    try:
+        start_dt = datetime.strptime(f"{date_str} {start_time_str}", "%Y-%m-%d %H:%M")
+        end_dt = datetime.strptime(f"{date_str} {end_time_str}", "%Y-%m-%d %H:%M")
+    except ValueError:
+        return jsonify({"slots": []})
+
+    # 2. Buscar qué citas ya existen
+    appointments = db.execute("""
+        SELECT time(appointment_date) as appt_time 
+        FROM appointments 
+        WHERE doctor_id = ? AND date(appointment_date) = ? AND status != 'cancelled'
+    """, doctor_id, date_str)
+
+    booked_times = [appt["appt_time"][:5] for appt in appointments]
+
+    # 3. Generar los intervalos de 30 minutos
+    slots = []
+    current_dt = start_dt
+    while current_dt + timedelta(minutes=30) <= end_dt:
+        slot_str = current_dt.strftime("%H:%M")
+        if slot_str not in booked_times:
+            slots.append(slot_str)
+        current_dt += timedelta(minutes=30)
+
+    return jsonify({"slots": slots})
 
 
 # -------------------------

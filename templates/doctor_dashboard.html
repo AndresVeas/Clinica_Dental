@@ -14,6 +14,7 @@
       <thead class="table-light">
         <tr>
           <th scope="col">Attended</th>
+          <th scope="col">Date</th>
           <th scope="col">Time</th>
           <th scope="col">Patient Name</th>
         </tr>
@@ -22,13 +23,14 @@
         {% for appt in appointments %}
         <tr>
           <td>
-            <input class="form-check-input" type="checkbox" name="attended" value="{{ appt['appointment_id'] }}" {% if appt['status'] == 'attended' %}checked{% endif %} style="transform: scale(1.5); margin-left: 10px;">
+            <input class="form-check-input" type="checkbox" name="attended" value="{{ appt['appointment_id'] }}" style="transform: scale(1.5); margin-left: 10px;">
           </td>
+          <td class="align-middle">{{ appt['appointment_date'] }}</td>
           <td class="align-middle fw-bold">{{ appt['appointment_time'] }}</td>
           <td class="align-middle">{{ appt['patient_name'] }}</td>
         </tr>
         {% else %}
-        <tr><td colspan="3" class="text-center py-4 text-muted">No appointments scheduled for today.</td></tr>
+        <tr><td colspan="4" class="text-center py-4 text-muted">No appointments scheduled for today.</td></tr>
         {% endfor %}
       </tbody>
     </table>

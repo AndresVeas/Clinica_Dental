@@ -4,10 +4,11 @@
 
 {% block main %}
 <div class="container mt-4">
-  <h3>First 50 Appointments</h3>
-  <table class="table">
-    <thead>
+  <h3 style="color: var(--main-blue); margin-bottom: 20px;">First 50 Appointments</h3>
+  <table class="table bg-white rounded shadow-sm">
+    <thead class="table-light">
       <tr>
+        <th>Date</th>
         <th>Time</th>
         <th>Patient</th>
         <th>Status</th>
@@ -16,12 +17,17 @@
     <tbody>
       {% for appt in appointments %}
       <tr>
-        <td>{{ appt['appointment_time'] }}</td>
+        <td>{{ appt['appointment_date'] }}</td>
+        <td class="fw-bold">{{ appt['appointment_time'] }}</td>
         <td>{{ appt['patient_name'] }}</td>
-        <td>{{ appt['status'] }}</td>
+        <td>
+          <span class="badge {% if appt['status'] == 'attended' %}bg-success{% elif appt['status'] == 'cancelled' %}bg-danger{% else %}bg-warning text-dark{% endif %}">
+            {{ appt['status']|capitalize }}
+          </span>
+        </td>
       </tr>
       {% else %}
-      <tr><td colspan="3">No appointments found.</td></tr>
+      <tr><td colspan="4" class="text-center py-4 text-muted">No appointments found.</td></tr>
       {% endfor %}
     </tbody>
   </table>
