@@ -28,15 +28,10 @@
                                 {% if session.get('user_id') %}
                                     
                                     {% if session.get('user_role') == 'owner' %}
-                                        <li class="nav-item"><a class="nav-link" href="/">Home</a></li>
                                         <li class="nav-item"><a class="nav-link" href="/owner/doctors">Doctors</a></li>
-
                                     {% elif session.get('user_role') == 'doctor' %}
-                                        <li class="nav-item"><a class="nav-link" href="/">Dashboard</a></li>
                                         <li class="nav-item"><a class="nav-link" href="/doctor/appointments">First 50 Appointments</a></li>
-
                                     {% elif session.get('user_role') == 'secretary' %}
-                                        <li class="nav-item"><a class="nav-link" href="/">Home</a></li>
                                         <li class="nav-item"><a class="nav-link" href="/secretary/doctors">Doctors</a></li>
                                         <li class="nav-item"><a class="nav-link" href="/secretary/appointments">Appointments</a></li>
                                     {% endif %}
@@ -59,8 +54,6 @@
                                             <li><a class="dropdown-item text-danger" href="/logout">Logout</a></li>
                                         </ul>
                                     </div>
-                                {% else %}
-                                    <a href="/login" class="btn btn-outline-cyan">Login</a>
                                 {% endif %}
                             </div>
                         </div>

@@ -107,21 +107,14 @@ def logout():
 @login_required
 @role_required("doctor")
 def doctor_dashboard():
-    """Doctor main page: first 10 appointments for today (checkboxes to mark attended)."""
+    """Doctor main page: first 10 scheduled appointments for today."""
     doctor_id = session.get("user_id")
     today = date.today().isoformat()
     
     if request.method == "POST":
         attended_ids = request.form.getlist("attended")
         try:
-            # First, reset all today's appointments for this doctor to 'scheduled'
-            db.execute("""
-                UPDATE appointments 
-                SET status = 'scheduled' 
-                WHERE doctor_id = ? AND date(appointment_date) = ?
-            """, doctor_id, today)
-            
-            # Then mark the checked ones as 'attended'
+            # Solo actualizamos a 'attended' las que el doctor marcó en este momento
             for aid in attended_ids:
                 db.execute("UPDATE appointments SET status = 'attended' WHERE appointment_id = ?", int(aid))
             flash("Attendance successfully updated.", "success")
@@ -131,13 +124,14 @@ def doctor_dashboard():
         return redirect("/doctor")
 
     try:
+        # Añadimos "AND a.status = 'scheduled'" para que desaparezcan al guardarse
         appointments = db.execute(
             """
             SELECT a.appointment_id, p.first_name || ' ' || p.last_name AS patient_name, 
                    time(a.appointment_date) AS appointment_time, a.status
             FROM appointments a
             JOIN patients p ON a.patient_id = p.patient_id
-            WHERE a.doctor_id = ? AND date(a.appointment_date) = ?
+            WHERE a.doctor_id = ? AND date(a.appointment_date) = ? AND a.status = 'scheduled'
             ORDER BY a.appointment_date ASC
             LIMIT 10
             """,
@@ -228,10 +222,6 @@ def secretary_doctors():
     return render_template("secretary_doctors.html", doctors=doctors)
 
 
-# -------------------------
-# NEW SECRETARY FORMS
-# -------------------------
-
 @app.route("/secretary/register_patient", methods=["GET", "POST"])
 @login_required
 @role_required("secretary")
@@ -302,6 +292,31 @@ def get_patient(cedula):
         return jsonify({"success": False})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)})
+    
+
+@app.route("/secretary/appointments")
+@login_required
+@role_required("secretary")
+def secretary_appointments():
+    """Full appointments list for secretary."""
+    try:
+        appointments = db.execute(
+            """
+            SELECT a.appointment_id, a.appointment_date AS appointment_time, a.status,
+                   p.first_name || ' ' || p.last_name AS patient_name,
+                   u.first_name || ' ' || u.last_name AS doctor_name
+            FROM appointments a
+            JOIN patients p ON a.patient_id = p.patient_id
+            JOIN users u ON a.doctor_id = u.user_id
+            ORDER BY a.appointment_date DESC
+            """
+        )
+    except Exception as e:
+        print(e)
+        appointments = []
+    return render_template("secretary_appointments.html", appointments=appointments)
+
+
 # -------------------------
 # OWNER ROUTES
 # -------------------------
