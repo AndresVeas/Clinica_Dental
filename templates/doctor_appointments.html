@@ -1,0 +1,29 @@
+{% extends "layout.html" %}
+
+{% block title %}Doctor Appointments{% endblock %}
+
+{% block main %}
+<div class="container mt-4">
+  <h3>First 50 Appointments</h3>
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Time</th>
+        <th>Patient</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for appt in appointments %}
+      <tr>
+        <td>{{ appt['appointment_time'] }}</td>
+        <td>{{ appt['patient_name'] }}</td>
+        <td>{{ appt['status'] }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="3">No appointments found.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

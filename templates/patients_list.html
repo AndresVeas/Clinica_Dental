@@ -1,0 +1,35 @@
+{% extends "layout.html" %}
+
+{% block title %}Patients{% endblock %}
+
+{% block main %}
+<div class="container mt-4">
+  <h3>Patients</h3>
+  <table class="table table-striped">
+    <thead>
+      <tr>
+        <th>First name</th>
+        <th>Last name</th>
+        <th>ID</th>
+        <th>Phone</th>
+        <th>Appointment</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in patients %}
+      {% set full = p.get('patient_name') if p.get('patient_name') else '' %}
+      {% set split = full.split(' ') if full else [] %}
+      <tr>
+        <td>{{ p.get('first_name') or (split[0] if split|length >=1 else '') }}</td>
+        <td>{{ p.get('last_name') or (split[1] if split|length >=2 else '') }}</td>
+        <td>{{ p.get('cedula') or p.get('patient_cedula') or '' }}</td>
+        <td>{{ p.get('phone') or p.get('patient_phone') or '' }}</td>
+        <td>{{ p.get('appointment_time') or '' }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5">No patients found.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

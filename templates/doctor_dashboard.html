@@ -1,0 +1,37 @@
+{% extends "layout.html" %}
+
+{% block title %}Doctor Dashboard{% endblock %}
+
+{% block main %}
+<div class="container mt-4">
+  <div class="mb-3">
+    <h3>Today's Appointments</h3>
+  </div>
+
+  <form method="post">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Attended</th>
+          <th>Time</th>
+          <th>Patient</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for appt in appointments %}
+        <tr>
+          <td>
+            <input type="checkbox" name="attended" value="{{ appt['appointment_id'] }}" {% if appt['status'] == 'attended' %}checked{% endif %}>
+          </td>
+          <td>{{ appt['appointment_time'] }}</td>
+          <td>{{ appt['patient_name'] }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="3">No appointments for today.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <button class="btn btn-primary" type="submit">Save changes</button>
+  </form>
+</div>
+{% endblock %}
