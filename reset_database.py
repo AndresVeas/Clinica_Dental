@@ -14,31 +14,34 @@ if os.path.exists(db_name):
         print(f"\n❌ ERROR: File '{db_name}' is locked. Close SQLite/Flask and try again.")
         sys.exit(1)
 
-# 2. CREATE AN EMPTY FILE FIRST (Crucial for CS50 library)
+# 2. Create an empty file first
 open(db_name, 'w').close()
 print(f"✔ New {db_name} file initialized.")
 
-# 3. Connect to the (now existing) database
+# 3. Connect to the database
 db = SQL(f"sqlite:///{db_name}")
 
 def setup_normalized_db():
-    print("Creating tables based on your schema...")
+    print("Creating tables based on your schema and PDF design...")
     
     # --- TABLE CREATION ---
     db.execute("CREATE TABLE roles (role_id INTEGER PRIMARY KEY AUTOINCREMENT, role_name TEXT NOT NULL UNIQUE)")
-    db.execute("CREATE TABLE specialties (specialty_id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL UNIQUE)")
     
+    # ESPECIALIDAD
+    db.execute("CREATE TABLE specialties (specialty_id INTEGER PRIMARY KEY AUTOINCREMENT, description TEXT NOT NULL UNIQUE)")
+    
+    # DOCTOR (Stored in users table to handle roles and login)
     db.execute("""
         CREATE TABLE users (
             user_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            dni TEXT UNIQUE NOT NULL,
+            cedula TEXT UNIQUE NOT NULL,
             username TEXT UNIQUE NOT NULL,
             hash TEXT NOT NULL,
             first_name TEXT NOT NULL,
             last_name TEXT NOT NULL,
             birth_date DATE,
-            phone TEXT,
             email TEXT,
+            phone TEXT,
             specialty_id INTEGER,
             start_time TIME,
             end_time TIME,
@@ -49,45 +52,44 @@ def setup_normalized_db():
         )
     """)
 
+    # CLIENTE (Patients)
     db.execute("""
         CREATE TABLE patients (
             patient_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            dni TEXT UNIQUE NOT NULL,
+            cedula TEXT UNIQUE NOT NULL,
             first_name TEXT NOT NULL,
             last_name TEXT NOT NULL,
             birth_date DATE,
-            phone TEXT,
             email TEXT,
+            phone TEXT,
             registration_date DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     """)
 
+    # PROCEDIMIENTO
+    db.execute("""
+        CREATE TABLE procedures (
+            procedure_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            specialty_id INTEGER NOT NULL,
+            description TEXT NOT NULL,
+            cost REAL,
+            FOREIGN KEY (specialty_id) REFERENCES specialties(specialty_id)
+        )
+    """)
+
+    # CITA
     db.execute("""
         CREATE TABLE appointments (
             appointment_id INTEGER PRIMARY KEY AUTOINCREMENT,
             patient_id INTEGER NOT NULL,
             doctor_id INTEGER NOT NULL,
+            procedure_id INTEGER,
             appointment_date DATETIME NOT NULL,
             amount REAL,
             status TEXT DEFAULT 'scheduled',
             FOREIGN KEY (patient_id) REFERENCES patients(patient_id),
-            FOREIGN KEY (doctor_id) REFERENCES users(user_id)
-        )
-    """)
-
-    db.execute("CREATE TABLE treatments (treatment_id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, description TEXT, cost REAL)")
-
-    db.execute("""
-        CREATE TABLE medical_records (
-            record_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            patient_id INTEGER NOT NULL,
-            doctor_id INTEGER NOT NULL,
-            treatment_id INTEGER,
-            diagnosis TEXT,
-            date DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (patient_id) REFERENCES patients(patient_id),
             FOREIGN KEY (doctor_id) REFERENCES users(user_id),
-            FOREIGN KEY (treatment_id) REFERENCES treatments(treatment_id)
+            FOREIGN KEY (procedure_id) REFERENCES procedures(procedure_id)
         )
     """)
 
@@ -97,7 +99,7 @@ def setup_normalized_db():
     for r in roles:
         db.execute("INSERT INTO roles (role_name) VALUES (?)", r)
     
-    db.execute("INSERT INTO specialties (name) VALUES (?)", 'General Dentistry')
+    db.execute("INSERT INTO specialties (description) VALUES (?)", 'General Dentistry')
 
     print("Generating user profiles...")
     initial_users = [
@@ -107,11 +109,11 @@ def setup_normalized_db():
         ("1722222222", "secretaria_lucia", "secre123", "Lucia", "Mendez", 4, None, None, None)
     ]
 
-    for dni, username, password, fname, lname, role_id, spec_id, start_time, end_time in initial_users:
+    for cedula, username, password, fname, lname, role_id, spec_id, start_time, end_time in initial_users:
         db.execute("""
-            INSERT INTO users (dni, username, hash, first_name, last_name, role_id, specialty_id, start_time, end_time)
+            INSERT INTO users (cedula, username, hash, first_name, last_name, role_id, specialty_id, start_time, end_time)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, dni, username, generate_password_hash(password), fname, lname, role_id, spec_id, start_time, end_time)
+        """, cedula, username, generate_password_hash(password), fname, lname, role_id, spec_id, start_time, end_time)
 
     print("\n--- SYSTEM READY ---")
 

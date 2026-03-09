@@ -26,21 +26,21 @@
                 <div class="collapse navbar-collapse" id="navbarSupportedContent">
                             <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                                 {% if session.get('user_id') %}
-                                    {% if session.get('user_role') not in ['doctor', 'secretary'] %}
-                                        <li class="nav-item"><a class="nav-link" href="/">Dashboard</a></li>
-                                    {% endif %}
-
+                                    
                                     {% if session.get('user_role') == 'owner' %}
+                                        <li class="nav-item"><a class="nav-link" href="/">Home</a></li>
                                         <li class="nav-item"><a class="nav-link" href="/owner/doctors">Doctors</a></li>
-                                        <li class="nav-item"><a class="nav-link" href="/owner/dashboard">Analytics</a></li>
 
                                     {% elif session.get('user_role') == 'doctor' %}
+                                        <li class="nav-item"><a class="nav-link" href="/">Dashboard</a></li>
                                         <li class="nav-item"><a class="nav-link" href="/doctor/appointments">First 50 Appointments</a></li>
 
                                     {% elif session.get('user_role') == 'secretary' %}
+                                        <li class="nav-item"><a class="nav-link" href="/">Home</a></li>
                                         <li class="nav-item"><a class="nav-link" href="/secretary/doctors">Doctors</a></li>
                                         <li class="nav-item"><a class="nav-link" href="/secretary/appointments">Appointments</a></li>
                                     {% endif %}
+
                                 {% endif %}
                             </ul>
 

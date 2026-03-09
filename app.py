@@ -1,5 +1,5 @@
 from cs50 import SQL
-from flask import Flask, flash, redirect, render_template, request, session
+from flask import Flask, flash, redirect, render_template, request, session, jsonify
 from flask_session import Session
 from helper import login_required, role_required
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -98,11 +98,11 @@ def logout():
     return redirect("/login")
 
 
-# -------------------------
-# Role-specific routes
-# -------------------------
+# (Keep your imports and basic setup at the top as they are)
 
-
+# -------------------------
+# DOCTOR ROUTES
+# -------------------------
 @app.route("/doctor", methods=["GET", "POST"])
 @login_required
 @role_required("doctor")
@@ -110,10 +110,31 @@ def doctor_dashboard():
     """Doctor main page: first 10 appointments for today (checkboxes to mark attended)."""
     doctor_id = session.get("user_id")
     today = date.today().isoformat()
+    
+    if request.method == "POST":
+        attended_ids = request.form.getlist("attended")
+        try:
+            # First, reset all today's appointments for this doctor to 'scheduled'
+            db.execute("""
+                UPDATE appointments 
+                SET status = 'scheduled' 
+                WHERE doctor_id = ? AND date(appointment_date) = ?
+            """, doctor_id, today)
+            
+            # Then mark the checked ones as 'attended'
+            for aid in attended_ids:
+                db.execute("UPDATE appointments SET status = 'attended' WHERE appointment_id = ?", int(aid))
+            flash("Attendance successfully updated.", "success")
+        except Exception as e:
+            flash("Error updating attendance.", "danger")
+            print(e)
+        return redirect("/doctor")
+
     try:
         appointments = db.execute(
             """
-            SELECT a.appointment_id, p.first_name || ' ' || p.last_name AS patient_name, a.appointment_date AS appointment_time, a.status
+            SELECT a.appointment_id, p.first_name || ' ' || p.last_name AS patient_name, 
+                   time(a.appointment_date) AS appointment_time, a.status
             FROM appointments a
             JOIN patients p ON a.patient_id = p.patient_id
             WHERE a.doctor_id = ? AND date(a.appointment_date) = ?
@@ -126,23 +147,6 @@ def doctor_dashboard():
         print(e)
         appointments = []
 
-    if request.method == "POST":
-        attended_ids = request.form.getlist("attended")
-        try:
-            # mark checked appointments as attended
-            for aid in attended_ids:
-                db.execute("UPDATE appointments SET status = ? WHERE appointment_id = ?", "attended", int(aid))
-
-            # mark other visible appointments as scheduled (unchecked)
-            ids_today = [str(a.get("appointment_id")) for a in appointments if a.get("appointment_id") is not None]
-            for aid in ids_today:
-                if aid not in attended_ids:
-                    db.execute("UPDATE appointments SET status = ? WHERE appointment_id = ?", "scheduled", int(aid))
-        except Exception:
-            pass
-        flash("Attendance updated.", "success")
-        return redirect("/doctor")
-
     return render_template("doctor_dashboard.html", appointments=appointments)
 
 
@@ -150,14 +154,13 @@ def doctor_dashboard():
 @login_required
 @role_required("doctor")
 def doctor_appointments():
-    """List first 50 appointments for the doctor (past, present and future).
-    This is a lightweight placeholder and assumes an appointments table exists.
-    """
+    """List first 50 appointments for the doctor (past, present and future)."""
     doctor_id = session.get("user_id")
     try:
         appointments = db.execute(
             """
-            SELECT a.appointment_id, p.first_name || ' ' || p.last_name AS patient_name, a.appointment_date AS appointment_time, a.status
+            SELECT a.appointment_id, p.first_name || ' ' || p.last_name AS patient_name, 
+                   a.appointment_date AS appointment_time, a.status
             FROM appointments a
             JOIN patients p ON a.patient_id = p.patient_id
             WHERE a.doctor_id = ?
@@ -172,20 +175,26 @@ def doctor_appointments():
     return render_template("doctor_appointments.html", appointments=appointments)
 
 
+# -------------------------
+# SECRETARY ROUTES
+# -------------------------
 @app.route("/secretary")
 @login_required
 @role_required("secretary")
 def secretary_dashboard():
-    """Secretary main page: truncated list of appointments with all doctors."""
+    """Secretary main page: appointments +/- 10 minutes from now."""
     try:
+        # SQLite datetime logic to find +/- 10 minutes from current local time
         appointments = db.execute(
             """
-            SELECT a.appointment_id, a.appointment_date AS appointment_time, a.status,
+            SELECT a.appointment_id, time(a.appointment_date) AS appointment_time, a.status,
                    p.first_name || ' ' || p.last_name AS patient_name,
                    u.first_name || ' ' || u.last_name AS doctor_name
             FROM appointments a
             JOIN patients p ON a.patient_id = p.patient_id
             JOIN users u ON a.doctor_id = u.user_id
+            WHERE a.appointment_date >= datetime('now', 'localtime', '-10 minutes')
+              AND a.appointment_date <= datetime('now', 'localtime', '+10 minutes')
             ORDER BY a.appointment_date ASC
             LIMIT 10
             """
@@ -200,12 +209,12 @@ def secretary_dashboard():
 @login_required
 @role_required("secretary")
 def secretary_doctors():
-    """List employed doctors with a virtual active-appointments column, specialty, and schedule."""
+    """List employed doctors with a virtual active-appointments column."""
     try:
         doctors = db.execute(
             """
             SELECT u.user_id, u.first_name, u.last_name, u.username,
-                   u.start_time, u.end_time, s.name AS specialty,
+                   u.start_time, u.end_time, s.description AS specialty,
                    (SELECT COUNT(*) FROM appointments a WHERE a.doctor_id = u.user_id AND a.status = 'scheduled') AS active_appointments
             FROM users u
             JOIN roles r ON u.role_id = r.role_id
@@ -219,43 +228,95 @@ def secretary_doctors():
     return render_template("secretary_doctors.html", doctors=doctors)
 
 
-@app.route("/secretary/appointments")
+# -------------------------
+# NEW SECRETARY FORMS
+# -------------------------
+
+@app.route("/secretary/register_patient", methods=["GET", "POST"])
 @login_required
 @role_required("secretary")
-def secretary_appointments():
-    """Full appointments list for secretary."""
+def secretary_register_patient():
+    if request.method == "POST":
+        cedula = request.form.get("cedula")
+        first_name = request.form.get("nombres")
+        last_name = request.form.get("apellidos")
+        phone = request.form.get("celular")
+        email = request.form.get("correo")
+        birth_date = request.form.get("fecha_nacimiento")
+
+        try:
+            db.execute("""
+                INSERT INTO patients (cedula, first_name, last_name, phone, email, birth_date) 
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, cedula, first_name, last_name, phone, email, birth_date)
+            flash("Patient registered successfully!", "success")
+            return redirect("/secretary")
+        except Exception as e:
+            print(e)
+            flash("Error registering patient. Cedula might already exist.", "danger")
+            
+    return render_template("secretary_register_patient.html")
+
+@app.route("/secretary/register_appointment", methods=["GET", "POST"])
+@login_required
+@role_required("secretary")
+def secretary_register_appointment():
+    if request.method == "POST":
+        patient_id = request.form.get("patient_id")
+        doctor_id = request.form.get("doctor_id")
+        fecha = request.form.get("fecha_cita")
+        hora = request.form.get("hora_cita")
+        estado = request.form.get("estado")
+        
+        # Combinar fecha y hora para SQLite
+        appointment_date = f"{fecha} {hora}:00"
+        
+        try:
+            db.execute("""
+                INSERT INTO appointments (patient_id, doctor_id, appointment_date, status) 
+                VALUES (?, ?, ?, ?)
+            """, patient_id, doctor_id, appointment_date, estado)
+            flash("Appointment scheduled successfully!", "success")
+            return redirect("/secretary")
+        except Exception as e:
+            print(e)
+            flash("Error scheduling appointment. Check if all fields are correct.", "danger")
+
+    # GET: Cargar datos para los Dropdowns
+    patients = db.execute("SELECT patient_id, cedula, first_name, last_name FROM patients ORDER BY last_name")
+    doctors = db.execute("SELECT user_id, first_name, last_name FROM users WHERE role_id = (SELECT role_id FROM roles WHERE role_name = 'doctor')")
+    specialties = db.execute("SELECT specialty_id, description FROM specialties")
+    
+    return render_template("secretary_register_appointment.html", patients=patients, doctors=doctors, specialties=specialties)
+
+# --- API Helper para autocompletar Paciente ---
+@app.route("/api/get_patient/<cedula>")
+@login_required
+@role_required("secretary")
+def get_patient(cedula):
+    """Devuelve los datos del paciente dado su número de cédula"""
     try:
-        appointments = db.execute(
-            """
-            SELECT a.appointment_id, a.appointment_date AS appointment_time, a.status,
-                   p.first_name || ' ' || p.last_name AS patient_name,
-                   u.first_name || ' ' || u.last_name AS doctor_name
-            FROM appointments a
-            JOIN patients p ON a.patient_id = p.patient_id
-            JOIN users u ON a.doctor_id = u.user_id
-            ORDER BY a.appointment_date DESC
-            """
-        )
+        rows = db.execute("SELECT patient_id, first_name, last_name FROM patients WHERE cedula = ?", cedula)
+        if len(rows) == 1:
+            return jsonify({"success": True, "patient": rows[0]})
+        return jsonify({"success": False})
     except Exception as e:
-        print(e)
-        appointments = []
-    return render_template("secretary_appointments.html", appointments=appointments)
-
-
-@app.route("/secretary/register")
-@login_required
-@role_required("secretary")
-def secretary_register():
-    flash("Register appointment form not implemented yet.", "info")
-    return redirect("/secretary")
-
-
+        return jsonify({"success": False, "error": str(e)})
+# -------------------------
+# OWNER ROUTES
+# -------------------------
 @app.route("/owner/dashboard")
 @login_required
 @role_required("owner")
 def owner_dashboard():
-    """Owner analytics dashboard placeholder."""
-    return render_template("owner_dashboard.html")
+    """Owner analytics dashboard with Chart.js placeholders."""
+    # Dummy data for chart representation (you will link this to db.execute later)
+    chart_data = {
+        "specialties": ["Orthodontics", "Endodontics", "Surgery", "Pediatrics"],
+        "earnings": [1500, 800, 2200, 1100],
+        "appointments_count": [45, 20, 15, 30]
+    }
+    return render_template("owner_dashboard.html", data=chart_data)
 
 
 @app.route("/owner/doctors")
@@ -266,7 +327,7 @@ def owner_doctors():
         doctors = db.execute(
             """
             SELECT u.user_id, u.first_name, u.last_name, u.username,
-                   u.start_time, u.end_time, s.name AS specialty,
+                   u.start_time, u.end_time, s.description AS specialty,
                    (SELECT COUNT(*) FROM appointments a WHERE a.doctor_id = u.user_id AND a.status = 'scheduled') AS active_appointments
             FROM users u
             JOIN roles r ON u.role_id = r.role_id
@@ -278,68 +339,3 @@ def owner_doctors():
         print(e)
         doctors = []
     return render_template("owner_doctors.html", doctors=doctors)
-
-
-@app.route("/profile/change-password", methods=["GET", "POST"])
-@login_required
-def change_password():
-    user_id = session.get("user_id")
-    if request.method == "POST":
-        current_password = request.form.get("old_password")
-        new_password = request.form.get("new_password")
-        confirm_password = request.form.get("confirm_password")
-
-        if not current_password or not new_password or not confirm_password:
-            flash("All fields are required.", "danger")
-            return redirect("/profile/change-password")
-
-        if new_password != confirm_password:
-            flash("New passwords do not match.", "danger")
-            return redirect("/profile/change-password")
-
-        if len(new_password) < 6:
-            flash("New password must be at least 6 characters.", "danger")
-            return redirect("/profile/change-password")
-
-        # Verify current password
-        try:
-            rows = db.execute("SELECT hash FROM users WHERE user_id = ?", user_id)
-        except Exception:
-            rows = []
-
-        if len(rows) != 1 or not check_password_hash(rows[0]["hash"], current_password):
-            flash("Current password is incorrect.", "danger")
-            return redirect("/profile/change-password")
-
-        # Update password
-        try:
-            new_hash = generate_password_hash(new_password)
-            db.execute("UPDATE users SET hash = ? WHERE user_id = ?", new_hash, user_id)
-            flash("Password updated successfully.", "success")
-        except Exception:
-            flash("Unable to update password. Try again later.", "danger")
-
-        return redirect("/")
-
-    return render_template("change_password.html")
-
-
-@app.route("/patients")
-@login_required
-@role_required(["doctor", "secretary", "owner"])
-def patients_list():
-    """List patients with full details: first name, last name, cedula, phone and appointment datetime."""
-    try:
-        patients = db.execute(
-            """
-            SELECT p.patient_id, p.first_name, p.last_name, p.dni AS cedula, p.phone, a.appointment_date AS appointment_time
-            FROM patients p
-            LEFT JOIN appointments a ON p.patient_id = a.patient_id
-            ORDER BY a.appointment_date DESC
-            """
-        )
-    except Exception as e:
-        print(e)
-        patients = []
-
-    return render_template("patients_list.html", patients=patients)
