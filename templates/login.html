@@ -1,0 +1,29 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Log In
+{% endblock %}
+
+{% block main %}
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-4">
+                <h2 class="text-center mb-4" style="color: #2575cb; font-weight: 700;">Login</h2>
+                
+                <form action="/login" method="post" class="shadow p-4 rounded bg-white">
+                    <div class="mb-3">
+                        <label for="username" class="form-label">Username</label>
+                        <input autocomplete="off" autofocus class="form-control" name="username" placeholder="Username" type="text" id="username">
+                    </div>
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Password</label>
+                        <input class="form-control" name="password" placeholder="Password" type="password" id="password">
+                    </div>
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-primary" type="submit" style="background-color: #2575cb; border: none;">Log In</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+{% endblock %}

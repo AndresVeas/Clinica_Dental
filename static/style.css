@@ -1,0 +1,42 @@
+:root {
+    --main-blue: #2575cb;
+    --cyan-light: #0dcaf0;
+    --cyan-100: #cff4fc;
+}
+
+body {
+    font-family: 'Roboto', sans-serif;
+    background-color: #f8f9fa;
+}
+
+.navbar {
+    background-color: var(--main-blue) !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.navbar-brand {
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: white !important;
+}
+
+.nav-link {
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.85) !important;
+    transition: color 0.3s ease;
+}
+
+.nav-link:hover {
+    color: var(--cyan-light) !important;
+}
+
+.btn-outline-cyan {
+    color: var(--cyan-light);
+    border-color: var(--cyan-light);
+    font-weight: 500;
+}
+
+.btn-outline-cyan:hover {
+    background-color: var(--cyan-light);
+    color: white;
+}
