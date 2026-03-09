@@ -50,15 +50,18 @@
   const specialties = JSON.parse('{{ data.specialties | tojson | safe }}');
   const earningsData = JSON.parse('{{ data.earnings | tojson | safe }}');
   const apptsData = JSON.parse('{{ data.appointments_count | tojson | safe }}');
+  
+  const months = JSON.parse('{{ data.months | tojson | safe }}');
+  const monthlyEarnings = JSON.parse('{{ data.monthly_earnings | tojson | safe }}');
 
   // 1. Gráfico de Ganancias Mensuales (Bar Chart)
   new Chart(document.getElementById('monthlyChart'), {
     type: 'bar',
     data: {
-      labels: ['Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb'],
+      labels: months,
       datasets: [{
         label: 'Revenue ($)',
-        data: [3000, 4200, 3800, 5000, 4100, 5600],
+        data: monthlyEarnings,
         backgroundColor: '#2575cb'
       }]
     },
@@ -75,7 +78,7 @@
       labels: specialties,
       datasets: [{
         data: earningsData,
-        backgroundColor: ['#0dcaf0', '#2575cb', '#198754', '#ffc107']
+        backgroundColor: ['#0dcaf0', '#2575cb', '#198754', '#ffc107', '#dc3545', '#6f42c1', '#d63384', '#fd7e14']
       }]
     },
     options: { 
@@ -91,7 +94,7 @@
       labels: specialties,
       datasets: [{
         data: apptsData,
-        backgroundColor: ['#0dcaf0', '#2575cb', '#198754', '#ffc107']
+        backgroundColor: ['#0dcaf0', '#2575cb', '#198754', '#ffc107', '#dc3545', '#6f42c1', '#d63384', '#fd7e14']
       }]
     },
     options: { 

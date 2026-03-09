@@ -396,10 +396,43 @@ def available_slots():
 @login_required
 @role_required("owner")
 def owner_dashboard():
+    # 1. Appointments and Earnings by Specialty
+    specialty_data = db.execute('''
+        SELECT 
+            s.description AS specialty, 
+            COUNT(a.appointment_id) AS total_appointments, 
+            IFNULL(SUM(a.amount), 0) AS total_earnings 
+        FROM specialties s 
+        LEFT JOIN users u ON s.specialty_id = u.specialty_id 
+        LEFT JOIN appointments a ON u.user_id = a.doctor_id 
+        GROUP BY s.description
+    ''')
+
+    specialties = [row["specialty"] for row in specialty_data]
+    earnings = [row["total_earnings"] for row in specialty_data]
+    appointments_count = [row["total_appointments"] for row in specialty_data]
+
+    # 2. Monthly Earnings
+    monthly_data = db.execute('''
+        SELECT 
+            strftime('%Y-%m', appointment_date) as month, 
+            IFNULL(SUM(amount), 0) as total 
+        FROM appointments 
+        WHERE amount IS NOT NULL
+        GROUP BY month 
+        ORDER BY month ASC 
+        LIMIT 6
+    ''')
+    
+    months = [row["month"] for row in monthly_data]
+    monthly_earnings = [row["total"] for row in monthly_data]
+
     chart_data = {
-        "specialties": ["Orthodontics", "Endodontics", "Surgery", "Pediatrics"],
-        "earnings": [1500, 800, 2200, 1100],
-        "appointments_count": [45, 20, 15, 30]
+        "specialties": specialties,
+        "earnings": earnings,
+        "appointments_count": appointments_count,
+        "months": months,
+        "monthly_earnings": monthly_earnings
     }
     return render_template("owner_dashboard.html", data=chart_data)
 
