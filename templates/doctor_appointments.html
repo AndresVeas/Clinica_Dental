@@ -1,13 +1,12 @@
 {% extends "layout.html" %}
-
 {% block title %}Doctor Appointments{% endblock %}
-
 {% block main %}
 <div class="container mt-4">
   <h3 style="color: var(--main-blue); margin-bottom: 20px;">First 50 Appointments</h3>
   <table class="table bg-white rounded shadow-sm">
     <thead class="table-light">
       <tr>
+        <th>Patient ID</th>
         <th>Date</th>
         <th>Time</th>
         <th>Patient</th>
@@ -17,6 +16,7 @@
     <tbody>
       {% for appt in appointments %}
       <tr>
+        <td class="text-muted">{{ appt['cedula'] }}</td>
         <td>{{ appt['appointment_date'] }}</td>
         <td class="fw-bold">{{ appt['appointment_time'] }}</td>
         <td>{{ appt['patient_name'] }}</td>
@@ -27,7 +27,7 @@
         </td>
       </tr>
       {% else %}
-      <tr><td colspan="4" class="text-center py-4 text-muted">No appointments found.</td></tr>
+      <tr><td colspan="5" class="text-center py-4 text-muted">No appointments found.</td></tr>
       {% endfor %}
     </tbody>
   </table>

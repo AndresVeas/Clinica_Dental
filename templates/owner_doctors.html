@@ -1,11 +1,9 @@
 {% extends "layout.html" %}
-
 {% block title %}Doctors - Owner{% endblock %}
-
 {% block main %}
 <div class="container mt-4">
   <h3>Doctors (Owner view)</h3>
-  <table class="table">
+  <table class="table bg-white rounded shadow-sm">
     <thead>
       <tr>
         <th>Name</th>
@@ -25,7 +23,7 @@
         <td>{{ d['active_appointments'] }}</td>
       </tr>
       {% else %}
-      <tr><td colspan="5">No doctors found.</td></tr>
+      <tr><td colspan="5" class="text-center py-4 text-muted">No doctors found.</td></tr>
       {% endfor %}
     </tbody>
   </table>

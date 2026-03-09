@@ -46,13 +46,12 @@
 </div>
 
 <script>
-  // Variables passed from Flask backend
-// Variables passed from Flask backend parsed safely
+  // Variables pasadas desde el backend de Flask de forma segura
   const specialties = JSON.parse('{{ data.specialties | tojson | safe }}');
   const earningsData = JSON.parse('{{ data.earnings | tojson | safe }}');
   const apptsData = JSON.parse('{{ data.appointments_count | tojson | safe }}');
 
-  // 1. Monthly Earnings (Bar Chart - Dummy data for months)
+  // 1. Gráfico de Ganancias Mensuales (Bar Chart)
   new Chart(document.getElementById('monthlyChart'), {
     type: 'bar',
     data: {
@@ -63,10 +62,13 @@
         backgroundColor: '#2575cb'
       }]
     },
-    options: { maintainAspectRatio: false }
+    options: { 
+        maintainAspectRatio: false,
+        responsive: true
+    }
   });
 
-  // 2. Earnings by Specialty (Pie Chart)
+  // 2. Gráfico de Ganancias por Especialidad (Pie Chart)
   new Chart(document.getElementById('earningsSpecChart'), {
     type: 'pie',
     data: {
@@ -76,10 +78,13 @@
         backgroundColor: ['#0dcaf0', '#2575cb', '#198754', '#ffc107']
       }]
     },
-    options: { maintainAspectRatio: false }
+    options: { 
+        maintainAspectRatio: false,
+        responsive: true
+    }
   });
 
-  // 3. Appointments by Specialty (Doughnut Chart)
+  // 3. Gráfico de Citas por Especialidad (Doughnut Chart)
   new Chart(document.getElementById('apptsSpecChart'), {
     type: 'doughnut',
     data: {
@@ -89,7 +94,10 @@
         backgroundColor: ['#0dcaf0', '#2575cb', '#198754', '#ffc107']
       }]
     },
-    options: { maintainAspectRatio: false }
+    options: { 
+        maintainAspectRatio: false,
+        responsive: true
+    }
   });
 </script>
 {% endblock %}
