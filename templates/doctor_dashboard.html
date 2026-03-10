@@ -7,7 +7,9 @@
     <p class="text-muted">Select the patients you have attended and click Save Changes.</p>
   </div>
   <form method="post" action="/doctor">
-    <table class="table table-hover shadow-sm bg-white rounded">
+    <div class="table-responsive">
+<div class="table-responsive">
+  <table class="table table-hover shadow-sm bg-white rounded">
       <thead class="table-light">
         <tr>
           <th scope="col">Attended</th>
@@ -33,6 +35,7 @@
         {% endfor %}
       </tbody>
     </table>
+</div>
     {% if appointments %}
     <div class="d-flex justify-content-end mt-3">
         <button class="btn btn-primary px-4" type="submit" style="background-color: var(--main-blue); border: none;">Save Changes</button>

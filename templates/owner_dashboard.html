@@ -43,28 +43,27 @@
         </div>
     </div>
   </div>
-</div>
 
 <script>
-  // Variables pasadas desde el backend de Flask de forma segura
+  // Variables passed from the Flask backend securely
   const specialtiesThisMonth = JSON.parse('{{ data.specialties_this_month | tojson | safe }}');
   const apptsDataThisMonth = JSON.parse('{{ data.appointments_count_this_month | tojson | safe }}');
   
   const months = JSON.parse('{{ data.months | tojson | safe }}');
   const monthlyEarnings = JSON.parse('{{ data.monthly_earnings | tojson | safe }}');
 
-  // Función para generar colores dependiendo del valor
+  // Function to generate dynamic colors depending on the value
   function getDynamicColors(data) {
     const maxVal = Math.max(...data);
     return data.map(value => {
-        // Calculamos la intensidad basada en el valor en comparación con el máximo
-        const intensity = Math.max(0.4, value / maxVal); // Mínimo de 0.4 para que no sea muy claro
-        // Generamos un azul donde la opacidad/intensidad varía
+        // Calculate intensity based on value vs max
+        const intensity = Math.max(0.4, value / maxVal); // Minimum 0.4 so it's not too light
+        // Generate blue color with varying opacity/intensity
         return `rgba(37, 117, 203, ${intensity})`;
     });
   }
 
-  // 1. Gráfico de Ganancias Mensuales (Bar Chart)
+  // 1. Monthly Earnings Chart (Bar Chart)
   new Chart(document.getElementById('monthlyChart'), {
     type: 'bar',
     data: {
@@ -83,7 +82,7 @@
     }
   });
 
-  // 2. Gráfico de Tendencia (Line Chart)
+  // 2. Earnings Trend Chart (Line Chart)
   new Chart(document.getElementById('trendChart'), {
     type: 'line',
     data: {
@@ -103,7 +102,7 @@
     }
   });
 
-  // 3. Gráfico de Citas por Especialidad este mes (Pie Chart)
+  // 3. Appointments by Specialty this month (Pie Chart)
   new Chart(document.getElementById('apptsSpecChart'), {
     type: 'pie',
     data: {

@@ -2,23 +2,23 @@ from cs50 import SQL
 from werkzeug.security import generate_password_hash
 from datetime import datetime, timedelta
 
-# Conexión a la base de datos existente
+# Connect to the existing database
 db = SQL("sqlite:///dentist.db")
 
 def populate():
-    print("Iniciando carga de datos...")
+    print("Starting data load...")
 
-    # 1. Insertar Especialidades adicionales
+    # 1. Insert additional Specialties
     specialties = ['Ortodoncia', 'Endodoncia', 'Cirugía Maxilofacial', 'Odontopediatría']
     for spec in specialties:
         try:
-            # ACTUALIZADO: 'name' a 'description'
+            # UPDATED: 'name' to 'description'
             db.execute("INSERT INTO specialties (description) VALUES (?)", spec)
         except:
             pass
 
-    # 2. Insertar 4 Doctores (Role ID 3)
-    # Contraseña para todos: doctor123
+    # 2. Insert 4 Doctors (Role ID 3)
+    # Password for all: doctor123
     doctors_data = [
         ("1755555551", "dr_smith", "John", "Smith", 2, "08:00", "16:00"), 
         ("1755555552", "dra_garcia", "Elena", "García", 3, "08:00", "16:00"), 
@@ -26,23 +26,23 @@ def populate():
         ("1755555554", "dra_lopez", "Ana", "López", 5, "09:00", "17:00")   
     ]
 
-    print("Insertando doctores...")
+    print("Inserting doctors...")
     doctor_ids = []
     for cedula, user, fn, ln, spec_id, start_time, end_time in doctors_data:
         try:
-            # ACTUALIZADO: 'dni' a 'cedula'
+            # UPDATED: 'dni' to 'cedula'
             id = db.execute("""
                 INSERT INTO users (cedula, username, hash, first_name, last_name, role_id, specialty_id, start_time, end_time)
                 VALUES (?, ?, ?, ?, ?, 3, ?, ?, ?)
             """, cedula, user, generate_password_hash("doctor123"), fn, ln, spec_id, start_time, end_time)
             doctor_ids.append(id)
         except:
-            # Si ya existen, obtenemos sus IDs
+            # If they already exist, get their IDs
             res = db.execute("SELECT user_id FROM users WHERE username = ?", user)
             doctor_ids.append(res[0]['user_id'])
 
-    # 3. Insertar Pacientes de prueba
-    print("Insertando pacientes...")
+    # 3. Insert test Patients
+    print("Inserting patients...")
     patients_data = [
         ("1722222221", "Roberto", "Cano"),
         ("1722222222", "Maria", "Vaca"),
@@ -54,17 +54,17 @@ def populate():
     patient_ids = []
     for cedula, fn, ln in patients_data:
         try:
-            # ACTUALIZADO: 'dni' a 'cedula'
+            # UPDATED: 'dni' to 'cedula'
             id = db.execute("INSERT INTO patients (cedula, first_name, last_name) VALUES (?, ?, ?)", cedula, fn, ln)
             patient_ids.append(id)
         except:
             res = db.execute("SELECT patient_id FROM patients WHERE cedula = ?", cedula)
             patient_ids.append(res[0]['patient_id'])
 
-    # 4. Insertar 10 Citas (Respetando horario base 08:00 - 17:00)
-    print("Programando 10 citas...")
+    # 4. Insert 10 Appointments (Respecting base schedule 08:00 - 17:00)
+    print("Scheduling 10 appointments...")
     
-    # Lista de citas: (Paciente_idx, Doctor_idx, Dias_desde_hoy, Hora, Monto)
+    # Appointments list: (Patient_idx, Doctor_idx, Days_from_today, Time, Amount)
     appointments_list = [
         (0, 0, 1, "09:00", 45.0), 
         (1, 0, 1, "10:30", 50.0),
@@ -89,8 +89,8 @@ def populate():
             VALUES (?, ?, ?, ?, 'scheduled')
         """, patient_ids[p_idx], doctor_ids[d_idx], full_datetime, amount)
 
-    print("\n--- CARGA EXITOSA ---")
-    print("Se han creado 4 doctores, 5 pacientes y 10 citas distribuidas.")
+    print("\n--- DATA LOAD SUCCESSFUL ---")
+    print("Generated 4 doctors, 5 patients, and 10 distributed appointments.")
 
 if __name__ == "__main__":
     populate()

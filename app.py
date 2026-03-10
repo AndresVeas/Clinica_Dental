@@ -135,7 +135,7 @@ def doctor_dashboard():
         return redirect("/doctor")
 
     try:
-        # Se agrega p.cedula a la consulta
+        # Add p.cedula to the query
         appointments = db.execute(
             """
             SELECT a.appointment_id, p.cedula, p.first_name || ' ' || p.last_name AS patient_name, 
@@ -165,7 +165,7 @@ def doctor_dashboard():
 def doctor_appointments():
     doctor_id = session.get("user_id")
     try:
-        # Se agrega p.cedula a la consulta
+        # Add p.cedula to the query
         appointments = db.execute(
             """
             SELECT a.appointment_id, p.cedula, p.first_name || ' ' || p.last_name AS patient_name, 
@@ -193,7 +193,7 @@ def doctor_appointments():
 @role_required("secretary")
 def secretary_dashboard():
     try:
-        # Se agrega p.cedula a la consulta
+        # Add p.cedula to the query
         appointments = db.execute(
             """
             SELECT a.appointment_id, p.cedula,
@@ -241,7 +241,7 @@ def secretary_doctors():
 @role_required("secretary")
 def secretary_appointments():
     try:
-        # Se agrega p.cedula a la consulta
+        # Add p.cedula to the query
         appointments = db.execute(
             """
             SELECT a.appointment_id, p.cedula,
@@ -303,7 +303,7 @@ def secretary_register_appointment():
 @role_required("secretary")
 def secretary_register_patient():
     if request.method == "POST":
-        # Nombres de variables sincronizados con el HTML en inglés
+        # Variable names synchronized with the english HTML
         cedula = request.form.get("id_number")
         first_name = request.form.get("first_name")
         last_name = request.form.get("last_name")
@@ -311,7 +311,7 @@ def secretary_register_patient():
         email = request.form.get("email")
         birth_date = request.form.get("birth_date")
 
-        # Validación para evitar AttributeError
+        # Validation to avoid AttributeError
         if not first_name or not last_name:
             flash("First and Last names are required.", "danger")
             return redirect("/secretary/register_patient")
@@ -338,7 +338,7 @@ def secretary_register_patient():
 @role_required("secretary")
 def get_patient(cedula):
     try:
-        # Se usa 'cedula' para coincidir con la base de datos
+        # 'cedula' is used to match the database
         rows = db.execute("SELECT patient_id, first_name, last_name FROM patients WHERE cedula = ?", cedula)
         if len(rows) == 1:
             return jsonify({"success": True, "patient": rows[0]})

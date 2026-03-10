@@ -8,11 +8,11 @@ db = SQL("sqlite:///dentist.db")
 def populate_mock_data():
     print("Starting data generation for charts...")
 
-    # Nombres falsos
+    # Fake names
     first_names = ["Carlos", "Ana", "Luis", "Maria", "Jorge", "Lucia", "Jose", "Marta", "Pedro", "Sofia", "Diego", "Paula", "Andres", "Laura", "Miguel", "Carmen"]
     last_names = ["Gomez", "Lopez", "Diaz", "Martinez", "Perez", "Garcia", "Sanchez", "Romero", "Sosa", "Torres", "Ruiz", "Ramirez", "Flores", "Benitez", "Acosta", "Medina"]
 
-    # 1. Crear 20 pacientes con números de cédula 
+    # 1. Create 20 patients with ID numbers 
     print("Creating 20 new patients...")
     patient_ids = []
     base_cedula = 1750000000
@@ -30,15 +30,15 @@ def populate_mock_data():
             """, cedula, fn, ln, phone, email)
             patient_ids.append(id)
         except Exception:
-            # En caso de cédula duplicada
+            # In case of a duplicate ID
             pass
 
-    # Si por alguna razon no se crearon, recuperamos todos los existentes
+    # If for some reason they weren't created, retrieve all existing ones
     if not patient_ids:
         patients = db.execute("SELECT patient_id FROM patients")
         patient_ids = [p['patient_id'] for p in patients]
 
-    # 2. Obtener Doctores existentes
+    # 2. Get existing Doctors
     doctors = db.execute("SELECT user_id, specialty_id FROM users WHERE role_id = (SELECT role_id FROM roles WHERE role_name = 'doctor')")
     if not doctors:
         print("No doctors found! Please make sure there are doctors in the database first (run pupulate_data.py).")
@@ -46,11 +46,11 @@ def populate_mock_data():
 
     doctor_ids = [d['user_id'] for d in doctors]
 
-    # 3. Generar citas en los últimos 5 meses (incluyendo el actual)
+    # 3. Generate appointments from the last 5 months (including current)
     print("Generating appointments for the last 5 months...")
     current_date = datetime.now()
     
-    # Rango de meses (0 = mes actual, 1 = mes anterior, ..., 4 = 4 meses atras)
+    # Month range (0 = current month, 1 = previous month, ..., 4 = 4 months ago)
     for i in range(5):
         month = current_date.month - i
         year = current_date.year
@@ -60,11 +60,11 @@ def populate_mock_data():
             
         _, num_days = calendar.monthrange(year, month)
         
-        # Generamos entre 15 y 30 citas por mes
+        # Generate between 15 and 30 appointments per month
         num_appointments = random.randint(15, 30)
         
         for _ in range(num_appointments):
-            # No generar en el futuro más allá de HOY si es el mes actual
+            # Do not generate beyond TODAY if it's the current month
             if i == 0 and current_date.day > 1:
                 day = random.randint(1, current_date.day)
             else:
