@@ -269,7 +269,7 @@ def secretary_register_appointment():
         doctor_id = request.form.get("doctor_id")
         appointment_date = request.form.get("appointment_date")
         appointment_time = request.form.get("appointment_time")
-        status = request.form.get("status")
+        status = "scheduled"
         
         full_datetime = f"{appointment_date} {appointment_time}:00"
 
@@ -289,10 +289,11 @@ def secretary_register_appointment():
             """, patient_id, doctor_id, full_datetime, status)
             flash("Appointment scheduled successfully!", "success")
             return redirect("/secretary")
-        except Exception:
-            flash("Error scheduling appointment.", "danger")
+        except Exception as e:
+            print(f"Error scheduling: {e}")
+            flash(f"Error scheduling appointment: {e}", "danger")
 
-    doctors = db.execute("SELECT user_id, first_name, last_name FROM users WHERE role_id = (SELECT role_id FROM roles WHERE role_name = 'doctor')")
+    doctors = db.execute("SELECT user_id, first_name, last_name, specialty_id FROM users WHERE role_id = (SELECT role_id FROM roles WHERE role_name = 'doctor')")
     specialties = db.execute("SELECT specialty_id, description FROM specialties")
     
     return render_template("secretary_register_appointment.html", doctors=doctors, specialties=specialties)
