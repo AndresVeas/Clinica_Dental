@@ -396,23 +396,23 @@ def available_slots():
 @login_required
 @role_required("owner")
 def owner_dashboard():
-    # 1. Appointments and Earnings by Specialty
-    specialty_data = db.execute('''
+    # 1. Appointments by Specialty (This Month)
+    current_month_str = datetime.now().strftime('%Y-%m')
+    specialty_data_this_month = db.execute('''
         SELECT 
             s.description AS specialty, 
-            COUNT(a.appointment_id) AS total_appointments, 
-            IFNULL(SUM(a.amount), 0) AS total_earnings 
+            COUNT(a.appointment_id) AS total_appointments 
         FROM specialties s 
-        LEFT JOIN users u ON s.specialty_id = u.specialty_id 
-        LEFT JOIN appointments a ON u.user_id = a.doctor_id 
+        JOIN users u ON s.specialty_id = u.specialty_id 
+        JOIN appointments a ON u.user_id = a.doctor_id 
+        WHERE strftime('%Y-%m', a.appointment_date) = ?
         GROUP BY s.description
-    ''')
+    ''', current_month_str)
 
-    specialties = [row["specialty"] for row in specialty_data]
-    earnings = [row["total_earnings"] for row in specialty_data]
-    appointments_count = [row["total_appointments"] for row in specialty_data]
+    specialties_this_month = [row["specialty"] for row in specialty_data_this_month]
+    appointments_count_this_month = [row["total_appointments"] for row in specialty_data_this_month]
 
-    # 2. Monthly Earnings
+    # 2. Monthly Earnings (Last 5 Months)
     monthly_data = db.execute('''
         SELECT 
             strftime('%Y-%m', appointment_date) as month, 
@@ -420,17 +420,19 @@ def owner_dashboard():
         FROM appointments 
         WHERE amount IS NOT NULL
         GROUP BY month 
-        ORDER BY month ASC 
-        LIMIT 6
+        ORDER BY month DESC 
+        LIMIT 5
     ''')
     
+    # Reverse to have chronological order
+    monthly_data.reverse()
+
     months = [row["month"] for row in monthly_data]
     monthly_earnings = [row["total"] for row in monthly_data]
 
     chart_data = {
-        "specialties": specialties,
-        "earnings": earnings,
-        "appointments_count": appointments_count,
+        "specialties_this_month": specialties_this_month,
+        "appointments_count_this_month": appointments_count_this_month,
         "months": months,
         "monthly_earnings": monthly_earnings
     }

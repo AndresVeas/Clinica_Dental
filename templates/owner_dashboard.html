@@ -13,31 +13,31 @@
       <button class="nav-link active" id="earnings-tab" data-bs-toggle="pill" data-bs-target="#earnings" type="button" role="tab">Monthly Earnings</button>
     </li>
     <li class="nav-item" role="presentation">
-      <button class="nav-link" id="spec-earnings-tab" data-bs-toggle="pill" data-bs-target="#spec-earnings" type="button" role="tab">Earnings by Specialty</button>
+      <button class="nav-link" id="trend-tab" data-bs-toggle="pill" data-bs-target="#trend" type="button" role="tab">Earnings Trend</button>
     </li>
     <li class="nav-item" role="presentation">
-      <button class="nav-link" id="spec-appts-tab" data-bs-toggle="pill" data-bs-target="#spec-appts" type="button" role="tab">Appointments by Specialty</button>
+      <button class="nav-link" id="spec-appts-tab" data-bs-toggle="pill" data-bs-target="#spec-appts" type="button" role="tab">Top Specialty (This Month)</button>
     </li>
   </ul>
 
   <div class="tab-content bg-white p-4 rounded shadow-sm" id="pills-tabContent">
     
     <div class="tab-pane fade show active" id="earnings" role="tabpanel">
-        <h5 class="text-center mb-3">Total Earnings (Last 6 Months)</h5>
+        <h5 class="text-center mb-3">Total Earnings (Last 5 Months)</h5>
         <div style="height: 400px; display: flex; justify-content: center;">
             <canvas id="monthlyChart"></canvas>
         </div>
     </div>
 
-    <div class="tab-pane fade" id="spec-earnings" role="tabpanel">
-        <h5 class="text-center mb-3">Earnings Distribution by Specialty</h5>
+    <div class="tab-pane fade" id="trend" role="tabpanel">
+        <h5 class="text-center mb-3">Earnings Trend</h5>
         <div style="height: 400px; display: flex; justify-content: center;">
-            <canvas id="earningsSpecChart"></canvas>
+            <canvas id="trendChart"></canvas>
         </div>
     </div>
 
     <div class="tab-pane fade" id="spec-appts" role="tabpanel">
-        <h5 class="text-center mb-3">Appointment Volume by Specialty</h5>
+        <h5 class="text-center mb-3">Appointments by Specialty (Current Month)</h5>
         <div style="height: 400px; display: flex; justify-content: center;">
             <canvas id="apptsSpecChart"></canvas>
         </div>
@@ -47,12 +47,22 @@
 
 <script>
   // Variables pasadas desde el backend de Flask de forma segura
-  const specialties = JSON.parse('{{ data.specialties | tojson | safe }}');
-  const earningsData = JSON.parse('{{ data.earnings | tojson | safe }}');
-  const apptsData = JSON.parse('{{ data.appointments_count | tojson | safe }}');
+  const specialtiesThisMonth = JSON.parse('{{ data.specialties_this_month | tojson | safe }}');
+  const apptsDataThisMonth = JSON.parse('{{ data.appointments_count_this_month | tojson | safe }}');
   
   const months = JSON.parse('{{ data.months | tojson | safe }}');
   const monthlyEarnings = JSON.parse('{{ data.monthly_earnings | tojson | safe }}');
+
+  // Función para generar colores dependiendo del valor
+  function getDynamicColors(data) {
+    const maxVal = Math.max(...data);
+    return data.map(value => {
+        // Calculamos la intensidad basada en el valor en comparación con el máximo
+        const intensity = Math.max(0.4, value / maxVal); // Mínimo de 0.4 para que no sea muy claro
+        // Generamos un azul donde la opacidad/intensidad varía
+        return `rgba(37, 117, 203, ${intensity})`;
+    });
+  }
 
   // 1. Gráfico de Ganancias Mensuales (Bar Chart)
   new Chart(document.getElementById('monthlyChart'), {
@@ -62,7 +72,9 @@
       datasets: [{
         label: 'Revenue ($)',
         data: monthlyEarnings,
-        backgroundColor: '#2575cb'
+        backgroundColor: getDynamicColors(monthlyEarnings),
+        borderColor: '#2575cb',
+        borderWidth: 1
       }]
     },
     options: { 
@@ -71,29 +83,33 @@
     }
   });
 
-  // 2. Gráfico de Ganancias por Especialidad (Pie Chart)
-  new Chart(document.getElementById('earningsSpecChart'), {
+  // 2. Gráfico de Tendencia (Line Chart)
+  new Chart(document.getElementById('trendChart'), {
+    type: 'line',
+    data: {
+      labels: months,
+      datasets: [{
+        label: 'Earnings Trend ($)',
+        data: monthlyEarnings,
+        borderColor: '#198754',
+        backgroundColor: 'rgba(25, 135, 84, 0.2)',
+        fill: true,
+        tension: 0.3
+      }]
+    },
+    options: { 
+        maintainAspectRatio: false,
+        responsive: true
+    }
+  });
+
+  // 3. Gráfico de Citas por Especialidad este mes (Pie Chart)
+  new Chart(document.getElementById('apptsSpecChart'), {
     type: 'pie',
     data: {
-      labels: specialties,
+      labels: specialtiesThisMonth,
       datasets: [{
-        data: earningsData,
-        backgroundColor: ['#0dcaf0', '#2575cb', '#198754', '#ffc107', '#dc3545', '#6f42c1', '#d63384', '#fd7e14']
-      }]
-    },
-    options: { 
-        maintainAspectRatio: false,
-        responsive: true
-    }
-  });
-
-  // 3. Gráfico de Citas por Especialidad (Doughnut Chart)
-  new Chart(document.getElementById('apptsSpecChart'), {
-    type: 'doughnut',
-    data: {
-      labels: specialties,
-      datasets: [{
-        data: apptsData,
+        data: apptsDataThisMonth,
         backgroundColor: ['#0dcaf0', '#2575cb', '#198754', '#ffc107', '#dc3545', '#6f42c1', '#d63384', '#fd7e14']
       }]
     },
