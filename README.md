@@ -1,5 +1,5 @@
 # Dental Clinic Management System
-#### Video Demo: [YOUR YOUTUBE URL HERE]
+#### Video Demo: https://youtu.be/VLEhD6xINyQ?si=jhPtguwrKNCYMsYK
 
 ## Description:
 This project is a comprehensive web-based application designed to streamline the daily operations of a dental clinic. The application facilitates patient management, appointment scheduling with dynamic time-slot validation, and business performance visualization through interactive dashboards.
